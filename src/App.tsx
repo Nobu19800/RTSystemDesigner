@@ -41,6 +41,9 @@ import './App.css';
  * React Flow Node Types
  * ========================================================= */
 
+const API_BASE_URL =
+  'https://rt-session-server.rtsystem-designer-web.workers.dev';
+
 const nodeTypes = {
   rtc: RTCNode,
 };
@@ -497,12 +500,27 @@ function RTCEditor() {
       }
 
 
+      if (!id) {
+
+        setSessionId(
+          null
+        );
+
+        setSessionError(
+          'Sessionが指定されていません。'
+        );
+
+        return;
+      }
+
       setSessionId(
         id
       );
 
 
-      async function loadSession() {
+      async function loadSession(
+        sessionId: string
+        ) {
 
         try {
 
@@ -517,7 +535,7 @@ function RTCEditor() {
 
           const response =
             await fetch(
-              `/api/sessions/${id}`
+              `${API_BASE_URL}/api/sessions/${encodeURIComponent(sessionId)}`
             );
 
 
@@ -702,7 +720,9 @@ function RTCEditor() {
       }
 
 
-      loadSession();
+      loadSession(
+        id
+      );
 
     },
 
@@ -1473,37 +1493,27 @@ function RTCEditor() {
           return;
         }
 
-
         try {
 
           const response =
             await fetch(
-              `/api/sessions/${sessionId}`,
-
+              `${API_BASE_URL}/api/sessions/${encodeURIComponent(sessionId)}`,
               {
-
                 method:
                   'PUT',
 
                 headers: {
-
                   'Content-Type':
                     'application/json',
-
                 },
 
                 body:
                   JSON.stringify({
-
                     nodes,
-
                     edges,
-
                   }),
-
               }
             );
-
 
           if (!response.ok) {
 
@@ -1512,7 +1522,6 @@ function RTCEditor() {
             );
 
           }
-
 
           window.alert(
             'システム構成を保存しました。'
@@ -1524,7 +1533,6 @@ function RTCEditor() {
           console.error(
             error
           );
-
 
           window.alert(
             '保存に失敗しました。'
