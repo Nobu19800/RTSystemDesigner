@@ -29,6 +29,7 @@ import type {
   RTCNodeData,
   RTCPort,
   RTCServicePort,
+  RTCServiceInterface,
   RTCDeployment,
   RTCConf,
   RTCImplementationSpec,
@@ -811,9 +812,6 @@ function RTCEditor() {
             &&
             portB.direction ===
               'in'
-            &&
-            portA.dataType ===
-              portB.dataType
           );
 
         }
@@ -830,6 +828,21 @@ function RTCEditor() {
           portB.portType ===
             'service'
         ) {
+
+            /*
+            * どちらか一方でも
+            * Service Interfaceが未設定なら
+            * 接続を許可する
+            */
+
+            if (
+              portA.interfaces.length === 0
+              ||
+              portB.interfaces.length === 0
+            ) {
+
+              return true;
+            }
 
           return (
             findMatchingServiceInterfaces(
@@ -999,6 +1012,207 @@ function RTCEditor() {
       ],
     );
 
+    /* =======================================================
+ * Create New Empty RTC
+ * ======================================================= */
+
+const createNewRTC =
+  useCallback(
+    () => {
+
+      const id =
+        `newrtc-${rtcCount}`;
+
+
+      const position =
+        screenToFlowPosition({
+          x:
+            window.innerWidth /
+            2,
+
+          y:
+            window.innerHeight /
+            2,
+        });
+
+
+      const offset =
+        (
+          rtcCount % 5
+        ) * 20;
+
+
+      position.x +=
+        offset;
+
+      position.y +=
+        offset;
+
+
+      const nodeData:
+        RTCNodeData = {
+
+        name:
+          'NewRTC',
+
+        instanceName:
+          id,
+
+        state:
+          'INACTIVE',
+
+        ports: [
+
+          /*
+           * 型未指定 InPort
+           */
+
+          {
+            id:
+              'in',
+
+            name:
+              'in',
+
+            portType:
+              'data',
+
+            direction:
+              'in',
+
+            dataType:
+              '',
+          },
+
+
+          /*
+           * 型未指定 OutPort
+           */
+
+          {
+            id:
+              'out',
+
+            name:
+              'out',
+
+            portType:
+              'data',
+
+            direction:
+              'out',
+
+            dataType:
+              '',
+          },
+
+
+          /*
+           * Interface未設定 ServicePort
+           */
+
+          {
+            id:
+              'service',
+
+            name:
+              'service',
+
+            portType:
+              'service',
+
+            interfaces:
+              [],
+          },
+
+        ],
+
+
+        deployment:
+          createDefaultDeployment(),
+
+
+        rtcConf:
+          createDefaultRTCConf(),
+
+
+        configuration:
+          [],
+
+
+        implementation:
+          createDefaultImplementation(),
+
+      };
+
+
+      const newNode:
+        Node = {
+
+        id,
+
+        type:
+          'rtc',
+
+        position,
+
+        data:
+          nodeData,
+
+      };
+
+
+      setNodes(
+        (currentNodes) => [
+
+          ...currentNodes,
+
+          newNode,
+
+        ]
+      );
+
+
+      setRtcCount(
+        (count) =>
+          count + 1
+      );
+
+
+      /*
+       * RTC選択ダイアログを閉じる
+       */
+
+      setShowRTCDialog(
+        false
+      );
+
+
+      /*
+       * 作成直後のRTCを選択
+       */
+
+      setSelectedNodeId(
+        id
+      );
+
+
+      /*
+       * Generalタブを表示
+       */
+
+      setPropertyTab(
+        'general'
+      );
+
+    },
+
+    [
+      rtcCount,
+      screenToFlowPosition,
+      setNodes,
+    ],
+  );
 
   /* =======================================================
    * Add RTC
@@ -1229,6 +1443,50 @@ function RTCEditor() {
     );
 
 
+    /* =======================================================
+ * RTC Type Update
+ * ======================================================= */
+
+/* =======================================================
+ * RTC Type Update
+ * ======================================================= */
+
+const updateRTCType =
+  useCallback(
+    (
+      value:
+        string
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => ({
+
+          ...data,
+
+          name:
+            value,
+
+          instanceName:
+            `${value}0`,
+
+        })
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
   /* =======================================================
    * General Update
    * ======================================================= */
@@ -1360,6 +1618,834 @@ function RTCEditor() {
       ],
     );
 
+
+    /* =======================================================
+ * Create Unique Port ID
+ * ======================================================= */
+
+function createUniquePortId(
+  ports: RTCPort[],
+  baseName: string
+): string {
+
+  let index =
+    1;
+
+  let id =
+    `${baseName}${index}`;
+
+
+  while (
+    ports.some(
+      (port) =>
+        port.id === id
+    )
+  ) {
+
+    index +=
+      1;
+
+    id =
+      `${baseName}${index}`;
+  }
+
+
+  return id;
+}
+
+
+/* =======================================================
+ * Add Data InPort
+ * ======================================================= */
+
+const addDataInPort =
+  useCallback(
+    () => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const id =
+            createUniquePortId(
+              data.ports,
+              'in'
+            );
+
+
+          const newPort:
+            RTCPort = {
+
+            id,
+
+            name:
+              id,
+
+            portType:
+              'data',
+
+            direction:
+              'in',
+
+            dataType:
+              '',
+          };
+
+
+          return {
+            ...data,
+
+            ports: [
+              ...data.ports,
+              newPort,
+            ],
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Add Data OutPort
+ * ======================================================= */
+
+const addDataOutPort =
+  useCallback(
+    () => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const id =
+            createUniquePortId(
+              data.ports,
+              'out'
+            );
+
+
+          const newPort:
+            RTCPort = {
+
+            id,
+
+            name:
+              id,
+
+            portType:
+              'data',
+
+            direction:
+              'out',
+
+            dataType:
+              '',
+          };
+
+
+          return {
+            ...data,
+
+            ports: [
+              ...data.ports,
+              newPort,
+            ],
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Add ServicePort
+ * ======================================================= */
+
+const addServicePort =
+  useCallback(
+    () => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const id =
+            createUniquePortId(
+              data.ports,
+              'service'
+            );
+
+
+          const newPort:
+            RTCServicePort = {
+
+            id,
+
+            name:
+              id,
+
+            portType:
+              'service',
+
+            interfaces:
+              [],
+          };
+
+
+          return {
+            ...data,
+
+            ports: [
+              ...data.ports,
+              newPort,
+            ],
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Delete Port
+ * ======================================================= */
+
+const deletePort =
+  useCallback(
+    (
+      portIndex:
+        number
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      const node =
+        nodes.find(
+          (currentNode) =>
+            currentNode.id ===
+            selectedNodeId
+        );
+
+
+      if (!node) {
+        return;
+      }
+
+
+      const data =
+        node.data as
+          RTCNodeData;
+
+
+      const targetPort =
+        data.ports[
+          portIndex
+        ];
+
+
+      if (!targetPort) {
+        return;
+      }
+
+
+      /*
+       * Portを削除
+       */
+
+      updateRTCData(
+        selectedNodeId,
+
+        (currentData) => {
+
+          return {
+            ...currentData,
+
+            ports:
+              currentData
+                .ports
+                .filter(
+                  (
+                    _,
+                    index
+                  ) =>
+                    index !==
+                    portIndex
+                ),
+          };
+
+        }
+      );
+
+
+      /*
+       * このPortに接続されていたEdgeも削除
+       */
+
+      setEdges(
+        (currentEdges) =>
+          currentEdges.filter(
+            (edge) => {
+
+              const isSource =
+                edge.source ===
+                  selectedNodeId
+                &&
+                edge.sourceHandle ===
+                  targetPort.id;
+
+
+              const isTarget =
+                edge.target ===
+                  selectedNodeId
+                &&
+                edge.targetHandle ===
+                  targetPort.id;
+
+
+              return (
+                !isSource
+                &&
+                !isTarget
+              );
+
+            }
+          )
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      nodes,
+      updateRTCData,
+      setEdges,
+    ],
+  );
+
+/* =======================================================
+ * Data Port Update
+ * ======================================================= */
+
+const updateDataPort =
+  useCallback(
+    (
+      portIndex: number,
+      field:
+        | 'name'
+        | 'dataType',
+      value: string,
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const ports =
+            data.ports.map(
+              (
+                port,
+                index
+              ) => {
+
+                if (
+                  index !==
+                  portIndex
+                ) {
+                  return port;
+                }
+
+
+                if (
+                  port.portType !==
+                  'data'
+                ) {
+                  return port;
+                }
+
+
+                return {
+                  ...port,
+
+                  [field]:
+                    value,
+                };
+
+              }
+            );
+
+
+          return {
+            ...data,
+
+            ports,
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Service Port Name Update
+ * ======================================================= */
+
+const updateServicePortName =
+  useCallback(
+    (
+      portIndex:
+        number,
+
+      value:
+        string
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const ports =
+            data.ports.map(
+              (
+                port,
+                index
+              ) => {
+
+                if (
+                  index !==
+                  portIndex
+                ) {
+                  return port;
+                }
+
+
+                if (
+                  port.portType !==
+                  'service'
+                ) {
+                  return port;
+                }
+
+
+                return {
+                  ...port,
+
+                  name:
+                    value,
+                };
+
+              }
+            );
+
+
+          return {
+            ...data,
+
+            ports,
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Add Service Interface
+ * ======================================================= */
+
+/* =======================================================
+ * Add Service Interface
+ * ======================================================= */
+
+const addServiceInterface =
+  useCallback(
+    (
+      portIndex:
+        number
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const ports: RTCPort[] =
+            data.ports.map(
+              (
+                port,
+                index
+              ): RTCPort => {
+
+                if (
+                  index !==
+                  portIndex
+                ) {
+                  return port;
+                }
+
+
+                if (
+                  port.portType !==
+                  'service'
+                ) {
+                  return port;
+                }
+
+
+                const newInterface:
+                  RTCServiceInterface = {
+
+                  name:
+                    '',
+
+                  interfaceType:
+                    '',
+
+                  polarity:
+                    'consumer',
+                };
+
+
+                return {
+                  ...port,
+
+                  interfaces: [
+                    ...port.interfaces,
+                    newInterface,
+                  ],
+                };
+
+              }
+            );
+
+
+          return {
+            ...data,
+
+            ports,
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Update Service Interface
+ * ======================================================= */
+
+/* =======================================================
+ * Update Service Interface
+ * ======================================================= */
+
+const updateServiceInterface =
+  useCallback(
+    (
+      portIndex:
+        number,
+
+      interfaceIndex:
+        number,
+
+      field:
+        | 'name'
+        | 'interfaceType'
+        | 'polarity',
+
+      value:
+        string
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const ports: RTCPort[] =
+            data.ports.map(
+              (
+                port,
+                index
+              ): RTCPort => {
+
+                if (
+                  index !==
+                  portIndex
+                ) {
+                  return port;
+                }
+
+
+                if (
+                  port.portType !==
+                  'service'
+                ) {
+                  return port;
+                }
+
+
+                const interfaces:
+                  RTCServiceInterface[] =
+                    port.interfaces.map(
+                      (
+                        serviceInterface,
+                        currentInterfaceIndex
+                      ): RTCServiceInterface => {
+
+                        if (
+                          currentInterfaceIndex !==
+                          interfaceIndex
+                        ) {
+                          return serviceInterface;
+                        }
+
+
+                        if (
+                          field ===
+                          'polarity'
+                        ) {
+
+                          if (
+                            value !==
+                            'consumer'
+                            &&
+                            value !==
+                            'provider'
+                          ) {
+                            return serviceInterface;
+                          }
+
+
+                          return {
+                            ...serviceInterface,
+
+                            polarity:
+                              value,
+                          };
+
+                        }
+
+
+                        if (
+                          field ===
+                          'name'
+                        ) {
+
+                          return {
+                            ...serviceInterface,
+
+                            name:
+                              value,
+                          };
+
+                        }
+
+
+                        return {
+                          ...serviceInterface,
+
+                          interfaceType:
+                            value,
+                        };
+
+                      }
+                    );
+
+
+                return {
+                  ...port,
+
+                  interfaces,
+                };
+
+              }
+            );
+
+
+          return {
+            ...data,
+
+            ports,
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
+
+
+/* =======================================================
+ * Delete Service Interface
+ * ======================================================= */
+
+const deleteServiceInterface =
+  useCallback(
+    (
+      portIndex:
+        number,
+
+      interfaceIndex:
+        number
+    ) => {
+
+      if (!selectedNodeId) {
+        return;
+      }
+
+
+      updateRTCData(
+        selectedNodeId,
+
+        (data) => {
+
+          const ports =
+            data.ports.map(
+              (
+                port,
+                index
+              ) => {
+
+                if (
+                  index !==
+                  portIndex
+                ) {
+                  return port;
+                }
+
+
+                if (
+                  port.portType !==
+                  'service'
+                ) {
+                  return port;
+                }
+
+
+                return {
+                  ...port,
+
+                  interfaces:
+                    port.interfaces.filter(
+                      (
+                        _,
+                        currentInterfaceIndex
+                      ) =>
+                        currentInterfaceIndex !==
+                        interfaceIndex
+                    ),
+                };
+
+              }
+            );
+
+
+          return {
+            ...data,
+
+            ports,
+          };
+
+        }
+      );
+
+    },
+
+    [
+      selectedNodeId,
+      updateRTCData,
+    ],
+  );
 
   /* =======================================================
    * Configuration Update
@@ -1928,7 +3014,12 @@ function RTCEditor() {
                         selectedRTC.name
                       }
 
-                      readOnly
+                      onChange={
+                        (event) =>
+                          updateRTCType(
+                            event.target.value
+                          )
+                      }
                     />
 
 
@@ -2224,116 +3315,394 @@ function RTCEditor() {
                   ========================================= */}
 
               {
-                propertyTab ===
-                'ports'
+                propertyTab === 'ports'
+                &&
+                selectedRTC
                 &&
                 (
 
                   <div className="property-content">
 
+                    {/* =====================================
+                        Add Port
+                        ===================================== */}
+
+                    <div className="port-add-section">
+
+                      <div className="property-section">
+                        Add Port
+                      </div>
+
+
+                      <div className="port-add-buttons">
+
+                        <button
+                          type="button"
+                          className="small-action-button"
+                          onClick={addDataInPort}
+                        >
+                          + InPort
+                        </button>
+
+
+                        <button
+                          type="button"
+                          className="small-action-button"
+                          onClick={addDataOutPort}
+                        >
+                          + OutPort
+                        </button>
+
+
+                        <button
+                          type="button"
+                          className="small-action-button"
+                          onClick={addServicePort}
+                        >
+                          + ServicePort
+                        </button>
+
+                      </div>
+
+                    </div>
+
                     {
-                      selectedRTC
-                        .ports
-                        .map(
-                          (
-                            port,
-                            index
-                          ) => (
+                      selectedRTC.ports.map(
+                        (
+                          port,
+                          portIndex
+                        ) => (
 
-                            <div
-                              className="port-property"
+                          <div
+                            className="port-property"
+                            key={
+                              `${port.id}-${portIndex}`
+                            }
+                          >
 
-                              key={
-                                `${port.id}-${index}`
-                              }
-                            >
+                            {/* =====================================
+                                DataPort
+                                ===================================== */}
 
-                              <strong>
-                                {port.name}
-                              </strong>
+                            {
+                              port.portType === 'data'
+                              &&
+                              (
+                                <>
 
-
-                              {
-                                port.portType ===
-                                'data'
-                                &&
-                                (
-                                  <>
-
-                                    <div>
-                                      Type: DataPort
-                                    </div>
-
-                                    <div>
-                                      Direction: {port.direction}
-                                    </div>
-
-                                    <div>
-                                      Data Type: {port.dataType}
-                                    </div>
-
-                                  </>
-                                )
-                              }
-
-
-                              {
-                                port.portType ===
-                                'service'
-                                &&
-                                (
-                                  <>
-
-                                    <div>
-                                      Type: ServicePort
-                                    </div>
-
+                                  <div className="property-section">
 
                                     {
-                                      port.interfaces.map(
-                                        (
-                                          serviceInterface,
-                                          interfaceIndex
-                                        ) => (
+                                      port.direction === 'in'
+                                        ? 'Data InPort'
+                                        : 'Data OutPort'
+                                    }
 
-                                          <div
-                                            className="interface-property"
+                                  </div>
 
-                                            key={
-                                              interfaceIndex
+
+                                  {/* Port Name */}
+
+                                  <label>
+                                    Port Name
+                                  </label>
+
+                                  <input
+                                    value={
+                                      port.name
+                                    }
+
+                                    onChange={
+                                      (event) =>
+                                        updateDataPort(
+                                          portIndex,
+                                          'name',
+                                          event.target.value
+                                        )
+                                    }
+                                  />
+
+
+                                  {/* Data Type */}
+
+                                  <label>
+                                    Data Type
+                                  </label>
+
+                                  <input
+                                    placeholder="未指定"
+                                    value={
+                                      port.dataType ?? ''
+                                    }
+
+                                    onChange={
+                                      (event) =>
+                                        updateDataPort(
+                                          portIndex,
+                                          'dataType',
+                                          event.target.value
+                                        )
+                                    }
+                                  />
+
+
+                                  {/* Direction */}
+
+                                  <div className="port-readonly-info">
+
+                                    Direction:
+                                    {' '}
+
+                                    {
+                                      port.direction === 'in'
+                                        ? 'InPort'
+                                        : 'OutPort'
+                                    }
+
+                                  </div>
+
+                                </>
+                              )
+                            }
+
+
+                            {/* =====================================
+                                ServicePort
+                                ===================================== */}
+
+                            {
+                              port.portType === 'service'
+                              &&
+                              (
+                                <>
+
+                                  <div className="property-section">
+                                    ServicePort
+                                  </div>
+
+
+                                  {/* Port Name */}
+
+                                  <label>
+                                    Port Name
+                                  </label>
+
+                                  <input
+                                    value={
+                                      port.name
+                                    }
+
+                                    onChange={
+                                      (event) =>
+                                        updateServicePortName(
+                                          portIndex,
+                                          event.target.value
+                                        )
+                                    }
+                                  />
+
+
+                                  {/* =================================
+                                      Service Interfaces
+                                      ================================= */}
+
+                                  <div
+                                    className=
+                                      "service-interface-editor-header"
+                                  >
+
+                                    <strong>
+                                      Service Interfaces
+                                    </strong>
+
+
+                                    <button
+                                      type="button"
+
+                                      className=
+                                        "small-action-button"
+
+                                      onClick={
+                                        () =>
+                                          addServiceInterface(
+                                            portIndex
+                                          )
+                                      }
+                                    >
+                                      + Interface
+                                    </button>
+
+                                  </div>
+
+
+                                  {/* Interface未設定 */}
+
+                                  {
+                                    port.interfaces.length === 0
+                                    &&
+                                    (
+                                      <div
+                                        className=
+                                          "port-unconfigured-info"
+                                      >
+                                        Interface未設定
+                                      </div>
+                                    )
+                                  }
+
+
+                                  {/* =================================
+                                      Interfaces
+                                      ================================= */}
+
+                                  {
+                                    port.interfaces.map(
+                                      (
+                                        serviceInterface,
+                                        interfaceIndex
+                                      ) => (
+
+                                        <div
+                                          className=
+                                            "service-interface-editor"
+
+                                          key={
+                                            `${port.id}-interface-${interfaceIndex}`
+                                          }
+                                        >
+
+                                          {/* Interface Name */}
+
+                                          <label>
+                                            Interface Name
+                                          </label>
+
+                                          <input
+                                            placeholder="未指定"
+
+                                            value={
+                                              serviceInterface.name ??
+                                              ''
                                             }
-                                          >
 
-                                            {
+                                            onChange={
+                                              (event) =>
+                                                updateServiceInterface(
+                                                  portIndex,
+                                                  interfaceIndex,
+                                                  'name',
+                                                  event.target.value
+                                                )
+                                            }
+                                          />
+
+
+                                          {/* Interface Type */}
+
+                                          <label>
+                                            Interface Type
+                                          </label>
+
+                                          <input
+                                            placeholder="未指定"
+
+                                            value={
+                                              serviceInterface.interfaceType ??
+                                              ''
+                                            }
+
+                                            onChange={
+                                              (event) =>
+                                                updateServiceInterface(
+                                                  portIndex,
+                                                  interfaceIndex,
+                                                  'interfaceType',
+                                                  event.target.value
+                                                )
+                                            }
+                                          />
+
+
+                                          {/* Polarity */}
+
+                                          <label>
+                                            Polarity
+                                          </label>
+
+                                          <select
+                                            value={
                                               serviceInterface.polarity
                                             }
 
-                                            {' '}
-
-                                            {
-                                              serviceInterface.name
+                                            onChange={
+                                              (event) =>
+                                                updateServiceInterface(
+                                                  portIndex,
+                                                  interfaceIndex,
+                                                  'polarity',
+                                                  event.target.value
+                                                )
                                             }
+                                          >
 
-                                            {' : '}
+                                            <option value="consumer">
+                                              Consumer
+                                            </option>
 
-                                            {
-                                              serviceInterface.interfaceType
+                                            <option value="provider">
+                                              Provider
+                                            </option>
+
+                                          </select>
+
+
+                                          {/* Delete */}
+
+                                          <button
+                                            type="button"
+
+                                            className=
+                                              "delete-interface-button"
+
+                                            onClick={
+                                              () =>
+                                                deleteServiceInterface(
+                                                  portIndex,
+                                                  interfaceIndex
+                                                )
                                             }
+                                          >
+                                            Interface削除
+                                          </button>
 
-                                          </div>
+                                        </div>
 
-                                        )
                                       )
-                                    }
+                                    )
+                                  }
 
-                                  </>
-                                )
-                              }
+                                </>
+                              )
+                            }
 
-                            </div>
+                          <button
+                          type="button"
+                          className="delete-port-button"
+                          onClick={
+                            () =>
+                              deletePort(
+                                portIndex
+                              )
+                          }
+                        >
+                          Port削除
+                        </button>
 
-                          )
+
+                          </div>
+
                         )
+                      )
                     }
 
                   </div>
@@ -2514,6 +3883,28 @@ function RTCEditor() {
 
               </div>
 
+              <div className="rtc-create-new">
+
+                <button
+                  className="rtc-create-new-button"
+
+                  onClick={
+                    createNewRTC
+                  }
+                >
+
+                  <div className="rtc-list-name">
+                    + 新規RTCを作成
+                  </div>
+
+                  <div className="rtc-list-ports">
+                    型未指定のInPort / OutPort /
+                    ServicePortを作成
+                  </div>
+
+                </button>
+
+              </div>
 
               <div className="rtc-list">
 

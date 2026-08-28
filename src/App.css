@@ -698,3 +698,204 @@ textarea {
 
   font-size: 11px;
 }
+
+.rtc-create-new {
+  margin-bottom: 12px;
+
+  padding-bottom: 12px;
+
+  border-bottom: 1px solid #ccc;
+}
+
+
+.rtc-create-new-button {
+  width: 100%;
+
+  padding: 14px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 5px;
+
+  border: 1px dashed #777;
+
+  border-radius: 5px;
+
+  background: #f8f8f8;
+
+  cursor: pointer;
+
+  text-align: left;
+}
+
+
+.rtc-create-new-button:hover {
+  background: #eeeeee;
+}
+
+
+/* =========================================================
+ * Port Editor
+ * ========================================================= */
+
+.port-warning {
+  margin-top: 8px;
+
+  padding: 7px 9px;
+
+  border: 1px solid #c9a400;
+
+  border-radius: 4px;
+
+  background: #fffbea;
+
+  font-size: 11px;
+}
+
+
+.port-readonly-info {
+  margin-top: 8px;
+
+  color: #666;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+ * Service Interface Editor
+ * ========================================================= */
+
+.service-interface-editor-header {
+  margin-top: 18px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+}
+
+
+.small-action-button {
+  padding: 5px 9px;
+
+  border: 1px solid #999;
+
+  border-radius: 4px;
+
+  background: white;
+
+  cursor: pointer;
+
+  font-size: 11px;
+}
+
+
+.small-action-button:hover {
+  background: #f0f0f0;
+}
+
+
+.service-interface-editor {
+  margin-top: 12px;
+
+  padding: 10px;
+
+  border: 1px solid #ccc;
+
+  border-radius: 5px;
+
+  background: #fafafa;
+}
+
+
+.service-interface-editor select {
+  width: 100%;
+
+  padding: 7px;
+
+  border: 1px solid #aaa;
+
+  border-radius: 4px;
+
+  font-size: 12px;
+}
+
+
+.delete-interface-button {
+  width: 100%;
+
+  margin-top: 12px;
+
+  padding: 6px;
+
+  border: 1px solid #b66;
+
+  border-radius: 4px;
+
+  background: white;
+
+  cursor: pointer;
+
+  font-size: 11px;
+}
+
+
+.delete-interface-button:hover {
+  background: #fff0f0;
+}
+
+
+/* =========================================================
+ * Add Port
+ * ========================================================= */
+
+.port-add-section {
+  margin-bottom: 18px;
+
+  padding-bottom: 14px;
+
+  border-bottom: 1px solid #ccc;
+}
+
+
+.port-add-buttons {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 6px;
+}
+
+
+/* =========================================================
+ * Delete Port
+ * ========================================================= */
+
+.delete-port-button {
+  width: 100%;
+
+  margin-top: 14px;
+
+  padding: 7px;
+
+  border: 1px solid #b66;
+
+  border-radius: 4px;
+
+  background: white;
+
+  cursor: pointer;
+
+  font-size: 11px;
+}
+
+
+.delete-port-button:hover {
+  background: #fff0f0;
+}

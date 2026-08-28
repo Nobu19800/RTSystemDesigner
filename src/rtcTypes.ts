@@ -44,11 +44,14 @@ export type RTCServiceInterface = {
 
 export type RTCServicePort = {
   id: string;
+
   name: string;
 
-  portType: 'service';
+  portType:
+    'service';
 
-  interfaces: RTCServiceInterface[];
+  interfaces:
+    RTCServiceInterface[];
 };
 
 
