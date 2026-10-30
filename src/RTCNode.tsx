@@ -66,6 +66,7 @@ export default function RTCNode({
     <div
       className={[
         'rtc-node',
+        rtc.moduleKind === 'hakoniwa' ? 'hakoniwa-node' : '',
 
         `rtc-state-${rtc.state.toLowerCase()}`,
 

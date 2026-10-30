@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useState,
+  useRef,
 } from 'react';
 
 import {
@@ -27,6 +28,7 @@ import RTCNode from './RTCNode';
 
 import type {
   RTCNodeData,
+  ModuleKind,
   RTCPort,
   RTCServicePort,
   RTCServiceInterface,
@@ -72,9 +74,7 @@ type RTCSession = {
 
   description?: string;
 
-  rtcTemplates: RTCTemplate[];
-
-  nodes?: Node[];
+  components: Node[];
 
   edges?: Edge[];
 
@@ -374,6 +374,8 @@ function RTCEditor() {
     );
 
 
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+
   const [
     rtcCount,
     setRtcCount,
@@ -554,56 +556,25 @@ function RTCEditor() {
               await response.json();
 
 
-          if (
-            !Array.isArray(
-              session.rtcTemplates
-            )
-          ) {
-
-            throw new Error(
-              'SessionにrtcTemplatesがありません'
-            );
-
+          if (!Array.isArray(session.components) || !Array.isArray(session.edges)) {
+            throw new Error('Sessionにcomponentsまたはedgesがありません');
           }
 
-
-          /*
-           * 古いSessionでも動作するように
-           * deployment / rtcConf /
-           * configuration / implementation
-           * を補完する
-           */
-
-          const templates =
-            session.rtcTemplates.map(
-              (template) => ({
-
-                ...template,
-
-                deployment:
-                  template.deployment ??
-                  createDefaultDeployment(),
-
-                rtcConf:
-                  template.rtcConf ??
-                  createDefaultRTCConf(),
-
-                configuration:
-                  template.configuration ??
-                  [],
-
-                implementation:
-                  template.implementation ??
-                  createDefaultImplementation(),
-
-              })
-            );
-
-
-          setRtcTemplates(
-            templates
-          );
-
+          // componentsを唯一の保存データとし、追加ダイアログの候補もそこから生成する。
+          const templates: RTCTemplate[] = session.components.map(node => {
+            const data = node.data as RTCNodeData;
+            const { instanceName: _instanceName, state: _state, ...template } = data;
+            return {
+              ...template,
+              moduleKind: template.moduleKind ?? 'rtc',
+              ports: Array.isArray(template.ports) ? template.ports : [],
+              deployment: template.deployment ?? createDefaultDeployment(),
+              rtcConf: template.rtcConf ?? createDefaultRTCConf(),
+              configuration: template.configuration ?? [],
+              implementation: template.implementation ?? createDefaultImplementation(),
+            };
+          });
+          setRtcTemplates(templates);
 
           setSessionName(
             session.name ??
@@ -617,12 +588,12 @@ function RTCEditor() {
 
           if (
             Array.isArray(
-              session.nodes
+              session.components
             )
           ) {
 
             const loadedNodes =
-              session.nodes.map(
+              session.components.map(
                 (node) => {
 
                   const data =
@@ -1528,6 +1499,81 @@ const updateRTCType =
   /* =======================================================
    * Deployment Update
    * ======================================================= */
+
+  const updateModuleKind = (kind: ModuleKind) => {
+    if (!selectedNodeId) return;
+    updateRTCData(selectedNodeId, data => ({ ...data, moduleKind: kind }));
+  };
+
+  const updateChannelId = (portIndex: number, value: string) => {
+    if (!selectedNodeId) return;
+    if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) return;
+    updateRTCData(selectedNodeId, data => ({
+      ...data,
+      ports: data.ports.map((port, index) =>
+        index === portIndex && port.portType === 'data'
+          ? { ...port, channelId: value === '' ? undefined : Number(value) }
+          : port
+      ),
+    }));
+  };
+
+  const normalizeNode = (node: Node): Node => {
+    const data = node.data as RTCNodeData;
+    if (!data || !Array.isArray(data.ports)) throw new Error('Invalid node data');
+    return {
+      ...node,
+      type: 'rtc',
+      data: {
+        ...data,
+        moduleKind: data.moduleKind === 'hakoniwa' ? 'hakoniwa' : 'rtc',
+        ports: data.ports.map(port => {
+          if (port.portType !== 'data') return port;
+          const id = port.channelId;
+          if (id === undefined || id === null) {
+            const { channelId: _unused, ...rest } = port;
+            return rest;
+          }
+          if (!Number.isSafeInteger(Number(id)) || Number(id) < 0) {
+            throw new Error('Invalid channelId');
+          }
+          return { ...port, channelId: Number(id) };
+        }),
+        deployment: data.deployment ?? createDefaultDeployment(),
+        rtcConf: data.rtcConf ?? createDefaultRTCConf(),
+        configuration: data.configuration ?? [],
+        implementation: data.implementation ?? createDefaultImplementation(),
+      },
+    };
+  };
+
+  const importJson = async (file: File) => {
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!parsed || typeof parsed !== 'object') throw new Error('Invalid JSON');
+      const obj = parsed as { components?: Node[]; edges?: Edge[] };
+      if (!Array.isArray(obj.components) || !Array.isArray(obj.edges)) {
+        throw new Error('JSON must contain components and edges arrays');
+      }
+      const loadedNodes = obj.components.map(normalizeNode);
+      setNodes(loadedNodes);
+      setEdges(obj.edges);
+      setSelectedNodeId(null);
+      window.alert('JSONを読み込みました。');
+    } catch (error) {
+      window.alert(`JSON読み込みエラー: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify({ version: 2, components: nodes, edges }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'rtsystem.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   const updateDeployment =
     useCallback(
@@ -2595,7 +2641,9 @@ const deleteServiceInterface =
 
                 body:
                   JSON.stringify({
-                    nodes,
+                    name: sessionName ?? sessionId,
+                    description: '',
+                    components: nodes,
                     edges,
                   }),
               }
@@ -2630,6 +2678,7 @@ const deleteServiceInterface =
 
       [
         sessionId,
+        sessionName,
         nodes,
         edges,
       ],
@@ -2676,6 +2725,24 @@ const deleteServiceInterface =
 
 
         <div className="header-buttons">
+           <input
+             ref={jsonFileInputRef}
+             type="file"
+             accept=".json,application/json"
+             style={{ display: 'none' }}
+             onChange={event => {
+               const file = event.target.files?.[0];
+               if (file) void importJson(file);
+               event.target.value = '';
+             }}
+           />
+           <button className="add-rtc-button" onClick={() => jsonFileInputRef.current?.click()}>
+             JSON読込
+           </button>
+           <button className="add-rtc-button" onClick={exportJson}>
+             JSON出力
+           </button>
+
 
           <button
             className="add-rtc-button"
@@ -3024,6 +3091,15 @@ const deleteServiceInterface =
 
 
                     <label>
+                     <label>Module Kind</label>
+                     <select
+                       value={selectedRTC.moduleKind ?? 'rtc'}
+                       onChange={event => updateModuleKind(event.target.value as ModuleKind)}
+                     >
+                       <option value="rtc">RTC</option>
+                       <option value="hakoniwa">Hakoniwa Asset</option>
+                     </select>
+
                       Instance Name
                     </label>
 
@@ -3445,6 +3521,20 @@ const deleteServiceInterface =
                                     }
                                   />
 
+
+                                   {selectedRTC.moduleKind === 'hakoniwa' && (
+                                     <>
+                                       <label>Channel ID</label>
+                                       <input
+                                         type="number"
+                                         min="0"
+                                         step="1"
+                                         placeholder="未指定"
+                                         value={port.channelId ?? ''}
+                                         onChange={event => updateChannelId(portIndex, event.target.value)}
+                                       />
+                                     </>
+                                   )}
 
                                   {/* Direction */}
 

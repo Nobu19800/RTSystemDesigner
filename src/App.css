@@ -899,3 +899,6 @@ textarea {
 .delete-port-button:hover {
   background: #fff0f0;
 }
+.property-content select { width: 100%; padding: 7px; border: 1px solid #aaa; border-radius: 4px; font-size: 12px; }
+.hakoniwa-node { border-color: #439b69; }
+.hakoniwa-node .rtc-header { background: #e8f6ec; }

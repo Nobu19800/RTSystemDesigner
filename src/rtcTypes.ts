@@ -1,3 +1,5 @@
+export type ModuleKind = 'rtc' | 'hakoniwa';
+
 export type RTCState =
   | 'ACTIVE'
   | 'INACTIVE'
@@ -20,6 +22,7 @@ export type RTCDataPort = {
     | 'out';
 
   dataType: string;
+  channelId?: number;
 };
 
 
@@ -137,6 +140,7 @@ export type RTCImplementationSpec = {
  * ========================================================= */
 
 export type RTCNodeData = {
+  moduleKind?: ModuleKind;
   name: string;
 
   instanceName: string;
